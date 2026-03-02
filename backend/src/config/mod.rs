@@ -49,10 +49,18 @@ pub struct DatabaseConfig {
     pub password: String,
 }
 
-fn default_db_host() -> String { "localhost".to_string() }
-fn default_db_port() -> u16 { 5432 }
-fn default_db_name() -> String { "home_nas".to_string() }
-fn default_db_user() -> String { "postgres".to_string() }
+fn default_db_host() -> String {
+    "localhost".to_string()
+}
+fn default_db_port() -> u16 {
+    5432
+}
+fn default_db_name() -> String {
+    "home_nas".to_string()
+}
+fn default_db_user() -> String {
+    "postgres".to_string()
+}
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
@@ -118,7 +126,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_app_paths() {
         let paths = vec![
