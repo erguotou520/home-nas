@@ -71,6 +71,31 @@ class ApiClient {
         }
     }
 
+
+    async postBinary<T>(endpoint: string, bytes: Uint8Array): Promise<ApiResponse<T>> {
+        try {
+            const token = useAuthStore.getState().token
+            const headers: HeadersInit = token
+                ? { Authorization: `Bearer ${token}` }
+                : {}
+
+            const response = await fetch(`${this.getBaseUrl()}${endpoint}`, {
+                method: 'POST',
+                headers,
+                body: bytes,
+            })
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ error: 'Request failed' }))
+                return { error: error.error || `HTTP ${response.status}` }
+            }
+
+            const data = await response.json()
+            return { data }
+        } catch (error: any) {
+            return { error: error.message || 'Network error' }
+        }
+    }
     async patch<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
         try {
             const response = await fetch(`${this.getBaseUrl()}${endpoint}`, {

@@ -1,5 +1,5 @@
 export { apiClient } from './client'
 export { useLogin, useCurrentUser, useRegisterUser } from './useAuth'
-export { useFiles, useCopyFile, useMoveFile, useDeleteFile } from './useFiles'
+export { useFiles, useCopyFile, useMoveFile, useDeleteFile, useUploadFile } from './useFiles'
 export { useShares, useCreateShare, useDeleteShare } from './useShares'
 export { useLyrics, useMediaInfo, getStreamUrl, getThumbnailUrl } from './useMedia'

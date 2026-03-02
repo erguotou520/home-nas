@@ -115,3 +115,38 @@ export function useDeleteFile() {
         },
     })
 }
+
+
+export function useUploadFile() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async ({
+            app,
+            path,
+            filename,
+            bytes,
+            overwrite = false,
+        }: {
+            app: string
+            path: string
+            filename: string
+            bytes: Uint8Array
+            overwrite?: boolean
+        }) => {
+            const encodedPath = path
+                ? path.split('/').filter(Boolean).map(encodeURIComponent).join('/')
+                : ''
+            const targetPath = encodedPath ? `/${encodedPath}` : ''
+            const endpoint = `/api/files/${app}/upload${targetPath}?filename=${encodeURIComponent(filename)}&overwrite=${overwrite}`
+            const response = await apiClient.postBinary<{ success: boolean; path: string }>(endpoint, bytes)
+            if (response.error) {
+                throw new Error(response.error)
+            }
+            return response.data
+        },
+        onSuccess: (_, { app }) => {
+            queryClient.invalidateQueries({ queryKey: ['files', app] })
+        },
+    })
+}

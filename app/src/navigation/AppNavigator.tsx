@@ -10,7 +10,8 @@ import {
     BrowserScreen,
     VideoPlayerScreen,
     MusicPlayerScreen,
-    ImageViewerScreen
+    ImageViewerScreen,
+    UploadScreen
 } from '../screens'
 
 const Stack = createNativeStackNavigator()
@@ -87,6 +88,7 @@ export function AppNavigator() {
                         <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
                         <Stack.Screen name="MusicPlayer" component={MusicPlayerScreen} />
                         <Stack.Screen name="ImageViewer" component={ImageViewerScreen} />
+                        <Stack.Screen name="Upload" component={UploadScreen} />
                     </>
                 ) : (
                     // Unauthenticated screens
