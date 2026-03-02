@@ -38,6 +38,7 @@ Home NAS 是一个私有云存储管理平台，面向家庭/小团队场景，�
 3. 提供目录列表能力，返回名称、路径、目录标识、大小等基础信息。
 4. 支持文件 copy/move 操作。
 5. 支持删除文件或目录。
+6. 支持向指定目录上传文件（通过接口提交二进制内容并指定文件名）。
 
 ### 3.3 分享能力
 1. 登录用户可创建分享链接。
@@ -108,6 +109,7 @@ Home NAS 是一个私有云存储管理平台，面向家庭/小团队场景，�
 - `GET /api/files/:app/*path`
 - `PATCH /api/files/:app/*path`
 - `DELETE /api/files/:app/*path`
+- `POST /api/files/:app/upload/*path?filename=xxx[&overwrite=true]`
 
 ## 7. 配置需求
 `config.yaml` 需支持：

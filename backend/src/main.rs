@@ -6,7 +6,7 @@ use std::{
 };
 
 use axum::{
-    body::Body,
+    body::{Body, Bytes},
     extract::{FromRef, FromRequestParts, Path as AxumPath, Query, State},
     http::{header, request::Parts, StatusCode},
     response::{IntoResponse, Response},
@@ -178,6 +178,7 @@ async fn main() -> anyhow::Result<()> {
             "/api/files/:app/*path",
             get(list_files).patch(operate_file).delete(delete_file),
         )
+        .route("/api/files/:app/upload/*path", post(upload_file))
         .route("/api/media/stream/*path", get(stream_media))
         .route("/api/media/thumbnail/*path", get(media_thumbnail))
         .route("/api/media/lyrics/*path", get(media_lyrics))
@@ -626,6 +627,66 @@ async fn delete_file(
     Ok(Json(json!({"success": true})))
 }
 
+#[derive(Deserialize)]
+struct UploadQuery {
+    filename: Option<String>,
+    overwrite: Option<bool>,
+}
+
+async fn upload_file(
+    State(state): State<AppState>,
+    AxumPath((app, path)): AxumPath<(String, String)>,
+    Query(query): Query<UploadQuery>,
+    _claims: Claims,
+    body: Bytes,
+) -> ApiResult<(StatusCode, Json<serde_json::Value>)> {
+    if body.is_empty() {
+        return Err(ApiError::bad_request("Empty upload body"));
+    }
+
+    let base = get_app_base_path(&state.config, &app)
+        .ok_or_else(|| ApiError::not_found("App not found"))?;
+    let dir = resolve_within_base(&base, &path)?;
+
+    let metadata = fs::metadata(&dir)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    if !metadata.is_dir() {
+        return Err(ApiError::bad_request("Upload target must be a directory"));
+    }
+
+    let filename = query
+        .filename
+        .as_deref()
+        .filter(|v| !v.trim().is_empty())
+        .ok_or_else(|| ApiError::bad_request("Missing filename query parameter"))?;
+
+    validate_filename(filename)?;
+
+    let target = dir.join(filename);
+    if fs::try_exists(&target)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?
+        && !query.overwrite.unwrap_or(false)
+    {
+        return Err(ApiError::bad_request(
+            "Target file already exists; set overwrite=true",
+        ));
+    }
+
+    fs::write(&target, body)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "success": true,
+            "path": path_join_for_client(&path, filename)
+        })),
+    ))
+}
+
 async fn stream_media(
     State(state): State<AppState>,
     AxumPath(path): AxumPath<String>,
@@ -800,6 +861,13 @@ fn parse_timestamp_to_ms(ts: &str) -> Option<u64> {
         _ => frac[..3].parse::<u64>().ok()?,
     };
     Some(minutes * 60_000 + seconds * 1_000 + millis)
+}
+
+fn validate_filename(filename: &str) -> ApiResult<()> {
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err(ApiError::bad_request("Invalid filename"));
+    }
+    Ok(())
 }
 
 fn resolve_within_base(base: &str, rel: &str) -> ApiResult<PathBuf> {

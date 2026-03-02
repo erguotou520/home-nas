@@ -93,6 +93,7 @@ home-nas/
 | GET | /api/files/{app} | 列出文件 |
 | GET | /api/media/stream/{path} | 流媒体播放 |
 | POST | /api/shares | 创建分享 |
+| POST | /api/files/{app}/upload/{path}?filename=xxx | 上传文件到目录 |
 | GET | /s/{token} | 访问分享 |
 
 ## License
