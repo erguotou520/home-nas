@@ -15,8 +15,9 @@
 ## 技术栈
 
 ### 后端
-- Rust + Actix-web
-- SeaORM + PostgreSQL
+- Rust + Axum
+- SQLx + PostgreSQL
+- SQLx migrations
 - JWT 认证
 
 ### 前端
@@ -69,12 +70,8 @@ home-nas/
 ├── backend/          # Rust 后端
 │   ├── src/
 │   │   ├── config/   # 配置解析
-│   │   ├── handlers/ # API 处理器
-│   │   ├── models/   # SeaORM 实体
-│   │   ├── services/ # 业务逻辑
-│   │   ├── middleware/ # JWT 认证
-│   │   └── utils/    # 视频/音乐解析
-│   └── migrations/   # 数据库迁移
+│   │   └── main.rs   # Axum 路由与 SQLx 数据访问
+│   └── migrations/   # SQLx 数据库迁移
 ├── app/              # React Native 应用
 │   ├── src/
 │   │   ├── api/      # TanStack Query hooks
@@ -84,6 +81,7 @@ home-nas/
 │   │   └── navigation/ # 路由
 │   └── tamagui.config.ts
 ├── config.yaml       # 配置文件
+├── docs/            # 需求与设计文档
 └── docker-compose.yml
 ```
 
@@ -100,3 +98,8 @@ home-nas/
 ## License
 
 MIT
+
+
+## 需求文档
+
+详见 `docs/requirements.md`。
