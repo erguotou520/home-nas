@@ -475,6 +475,14 @@ async fn access_share(
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
+    if share.burn_after_read {
+        sqlx::query("DELETE FROM shares WHERE id = $1")
+            .bind(share.id)
+            .execute(&state.pool)
+            .await
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+    }
+
     Ok(Json(
         json!({"file_path": share.file_path, "app_type": share.app_type, "is_valid": true}),
     ))
@@ -517,7 +525,7 @@ async fn list_files(
     {
         let metadata = item.metadata().await.ok();
         let item_path = item.path();
-        let item_path_str = item_path.to_string_lossy().to_string();
+        let rel_item_path = path_join_for_client(&path, &item.file_name().to_string_lossy());
         let mime = if metadata.as_ref().is_some_and(|m| m.is_file()) {
             MimeGuess::from_path(&item_path)
                 .first_raw()
@@ -528,11 +536,11 @@ async fn list_files(
 
         entries.push(json!({
             "name": item.file_name().to_string_lossy().to_string(),
-            "path": item_path_str,
+            "path": rel_item_path,
             "is_dir": metadata.as_ref().is_some_and(|m| m.is_dir()),
             "size": metadata.as_ref().map(|m| m.len()),
             "mime_type": mime,
-            "thumbnail": metadata.as_ref().and_then(|m| if m.is_file() { Some(format!("/api/media/thumbnail/{}", urlencoding::encode(&item_path.to_string_lossy()))) } else { None })
+            "thumbnail": metadata.as_ref().and_then(|m| if m.is_file() { Some(format!("/api/media/thumbnail/{}", urlencoding::encode(&path_join_for_client(&path, &item.file_name().to_string_lossy())))) } else { None })
         }));
     }
 
@@ -800,5 +808,49 @@ fn resolve_within_base(base: &str, rel: &str) -> ApiResult<PathBuf> {
     }
 
     let base_path = Path::new(base);
+    let rel_path = PathBuf::from(rel);
+    if rel_path.is_absolute() {
+        if rel_path.starts_with(base_path) {
+            return Ok(rel_path);
+        }
+        return Err(ApiError::forbidden("Path is outside app root"));
+    }
+
     Ok(base_path.join(rel.trim_start_matches('/')))
+}
+
+fn path_join_for_client(parent: &str, name: &str) -> String {
+    if parent.is_empty() {
+        name.to_string()
+    } else {
+        format!("{}/{}", parent.trim_end_matches('/'), name)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_lrc, parse_timestamp_to_ms, path_join_for_client};
+
+    #[test]
+    fn test_parse_timestamp_to_ms() {
+        assert_eq!(parse_timestamp_to_ms("01:02.34"), Some(62_340));
+        assert_eq!(parse_timestamp_to_ms("00:10"), Some(10_000));
+        assert_eq!(parse_timestamp_to_ms("bad"), None);
+    }
+
+    #[test]
+    fn test_parse_lrc() {
+        let content = "[00:01.00]hello
+[00:02.50]world";
+        let parsed = parse_lrc(content);
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0]["time_ms"], 1000);
+        assert_eq!(parsed[0]["text"], "hello");
+    }
+
+    #[test]
+    fn test_path_join_for_client() {
+        assert_eq!(path_join_for_client("", "a.mp3"), "a.mp3");
+        assert_eq!(path_join_for_client("music", "a.mp3"), "music/a.mp3");
+    }
 }
